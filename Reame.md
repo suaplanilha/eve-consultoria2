@@ -1,95 +1,159 @@
-Gestão EVE - Sistema Apollo Enterprise (SAE)
+# EVE Consultoria | SAE SaaS
 
-Este documento detalha a arquitetura, estrutura de dados e funcionalidades do ERP Gestão EVE, desenvolvido sob o padrão SAE (Sistema Apollo Enterprise) utilizando a stack Google Apps Script (GAS) e Vue 3.
+WebApp de consultoria organizacional construído em **Google Apps Script + Google Sheets + Vue 3 via CDN**, com foco em operação real usando a planilha existente como banco de dados. O sistema foi remodelado para conectar o frontend ao backend do Apps Script com **`google.script.run` + Promises**, mantendo a proposta de um SaaS enxuto, moderno e pronto para evolução.
 
-🚀 Arquitetura Técnica
+## Estrutura das abas no Google Sheets
 
-Backend: Google Apps Script (V8 Runtime).
+> Padrão adotado: **1 aba = 1 entidade**, datas em **ISO 8601 / `yyyy-MM-dd`**, chave primária em **UUID** para novos registros, preservando compatibilidade com dados legados já existentes.
 
-Frontend: Vue 3 (via CDN) em modo Single File Component (SFC).
+### 1) Aba `EMPRESAS`
 
-Banco de Dados: Google Sheets (Abas atuando como tabelas relacionais).
+Colunas:
 
-Design System: SAE Glassmorphism Dark (Mobile-first).
+- `empresaId`
+- `nomeRazao`
+- `nomeFantasia`
+- `cnpj`
+- `endereco`
+- `telefone`
+- `email`
+- `responsavel`
+- `observacao`
+- `status`
+- `dataInicio`
+- `dataFimPrevista`
+- `createdAt`
+- `updatedAt`
 
-📊 Estrutura do Banco de Dados (Google Sheets)
+### 2) Aba `PROJETOS`
 
-O banco de dados é composto por abas específicas, onde cada linha representa um registro e a primeira coluna é sempre o identificador único (ID).
+Colunas:
 
-1. Aba: EMPRESAS
+- `projetoId`
+- `empresaId`
+- `nomeProjeto`
+- `escopo`
+- `faseAtual`
+- `consultorResponsavel`
+- `prioridade`
+- `statusManual`
+- `statusCalc`
+- `dataInicio`
+- `prazoFinal`
+- `orcamento`
+- `indicadorMeta`
+- `indicadorAtual`
+- `percentualConclusao`
+- `ultimaAtualizacao`
+- `createdAt`
+- `updatedAt`
 
-Armazena o cadastro de clientes e parceiros.
+### 3) Aba `TAREFAS`
 
-Colunas: empresaId, nomeRazao, nomeFantasia, cnpj, endereco, telefone, observacao, status, dataInicio, dataFimPrevista.
+Colunas:
 
-Padrão de ID: E-0000.
+- `tarefaId`
+- `projetoId`
+- `fase`
+- `descricao`
+- `responsavel`
+- `statusManual`
+- `statusCalc`
+- `prioridade`
+- `dataInicio`
+- `dataFim`
+- `ordem`
+- `semanaReferencia`
+- `dataConclusao`
+- `detalhes`
+- `resultado`
+- `observacao`
+- `metaTipo`
+- `metaValor`
+- `metaUnidade`
+- `resultadoFinal`
+- `createdAt`
+- `updatedAt`
 
-2. Aba: PROJETOS
+### 4) Aba `TAREFAS_HISTORICO`
 
-Agrupa as atividades por escopo de projeto.
+Colunas:
 
-Colunas: projetoId, empresaId, nomeProjeto, faseAtual, dataInicio, prazoFinal, statusCalc.
+- `historicoId`
+- `tarefaId`
+- `statusDe`
+- `statusPara`
+- `alteradoEm`
+- `origem`
+- `motivoConclusao`
+- `resultadoFinalNumber`
+- `resultadoFinalTexto`
 
-Padrão de ID: P-0000.
+### 5) Aba `LOGS`
 
-3. Aba: TAREFAS
+Colunas:
 
-O núcleo operacional do sistema, onde as ações são controladas.
+- `logId`
+- `timestamp`
+- `acao`
+- `entidade`
+- `entidadeId`
+- `detalhes`
 
-Colunas: tarefaId, projetoId, fase, descricao, statusManual, dataInicio, dataFim, ordem, semanaReferencia, statusCalc, dataConclusao, detalhes, resultado, observacao, metaTipo, metaValor, metaUnidade.
+## Backend (`code.gs`)
 
-Padrão de ID: T-0000.
+O backend foi reorganizado para separar claramente:
 
-4. Aba: TAREFAS_HISTORICO
+- **Entrega do HTML** (`doGet`)
+- **Leitura e normalização de entidades** (`getEntityRecords_`, `normalizeRecordByEntity_`)
+- **CRUD genérico e persistência** (`upsertEntity_`, `writeRecordAtRow_`, `appendRow_`)
+- **Regras de negócio** (`calculateTaskStatus_`, `calculateProjectStatus_`, `buildDashboardSummary_`)
+- **Relatórios executivos** (`buildExecutiveReportForProject_`, `apiGetExecutiveReport`)
+- **Auditoria e histórico** (`logAction_`, `appendTaskHistory_`)
+- **Performance** com `CacheService` para a carga inicial
 
-Log de mudanças de status para auditoria e linha do tempo.
+### APIs expostas ao frontend
 
-Colunas: historicoId, tarefaId, statusDe, statusPara, alteradoEm, origem, motivoConclusao, resultadoFinalNumber, resultadoFinalTexto.
+- `getInitialAppData(forceRefresh)`
+- `apiSaveEmpresa(payload)`
+- `apiSaveProjeto(payload)`
+- `apiSaveTarefa(payload)`
+- `apiConcluirTarefa(payload)`
+- `apiArchiveEmpresa(empresaId)`
+- `apiDeleteTarefa(tarefaId)`
+- `apiGetExecutiveReport(projetoId)`
 
-5. Aba: PARAMETROS
+## Frontend (`index.html`)
 
-Controle de variáveis de sistema e contadores de ID.
+Arquivo único com:
 
-Estrutura: Chave/Valor.
+- **Vue 3 via CDN**
+- **Tailwind via CDN** apenas para utilitários leves
+- **CSS customizado no mesmo arquivo**
+- **Layout Glassmorphism Dark mobile-first**
+- **Sidebar retrátil em telas menores**
+- **Skeleton loaders** durante a carga inicial
+- **Kanban de tarefas** por status
+- **Formulários modais completos** para empresas, projetos e tarefas
+- **Conclusão de tarefas com histórico**
+- **Relatório executivo por projeto**
 
-Chaves Críticas: NEXT_ID_E, NEXT_ID_P, NEXT_ID_T, SYSTEM_VERSION.
+## Fluxo operacional suportado
 
-6. Aba: LOGS
+1. Carregar empresas, projetos, tarefas, histórico e indicadores em uma única chamada inicial.
+2. Cadastrar e editar empresas conectadas à planilha real.
+3. Cadastrar e editar projetos vinculados a empresas.
+4. Cadastrar, editar, concluir e excluir tarefas.
+5. Registrar histórico de status e log de auditoria.
+6. Emitir relatórios executivos por projeto a partir dos dados persistidos.
 
-Registro de todas as operações de escrita (Create/Update).
+## Observações de performance
 
-Colunas: timestamp, acao, entidade, entidadeId, detalhes (JSON).
+Como o projeto usa Google Apps Script + Sheets:
 
-🛠️ Elementos Implementados (codigo.gs)
-
-O arquivo codigo.gs gerencia a inteligência do negócio e a ponte com o Sheets:
-
-Roteador (doGet): Serve o WebApp configurando viewport e segurança.
-
-Motor de Persistência (saveRecord): - Lógica inteligente de Upsert (identifica se deve criar ou atualizar).
-
-Atribuição automática de IDs sequenciais baseada em PARAMETROS.
-
-Registro automático de Logs de auditoria.
-
-Normalizador de Dados (getTableData): - Converte abas em objetos JSON para o Vue.
-
-Tratamento automático de objetos de Data para strings ISO.
-
-Gerador de IDs (generateSAEId): Garante a unicidade seguindo os prefixos E, P e T.
-
-API de Inicialização (getInitialAppData): Carrega todo o estado do sistema em uma única requisição para performance (Single Request Pattern).
-
-🎨 Interface e UI (Padrão SAE)
-
-Glassmorphism: Uso de fundos translúcidos e desfoque (backdrop-filter).
-
-Responsive Design: Foco em uso mobile sem sacrificar a visão desktop.
-
-Feedback: Logs em tempo real e skeletons para carregamento.
-
-📝 Notas de Versão
-
-Versão Atual: 1.0.0-SAE
-
-Status: Backend Core finalizado e integrado ao Banco de Dados.
+- A carga inicial usa **cache de 3 minutos** com `CacheService`.
+- As alterações invalidam o cache para evitar inconsistência.
+- O modelo está preparado para crescimento, mas em bases maiores o próximo passo recomendado é:
+  - leitura em lote por intervalo específico,
+  - agregações pré-computadas,
+  - ou estratégias de paginação e cache por entidade.
