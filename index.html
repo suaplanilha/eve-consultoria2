@@ -1240,6 +1240,40 @@
   <script>
     const { createApp, computed, nextTick, onMounted, reactive, watch } = Vue;
 
+
+    function logClientIssue(payload) {
+      if (typeof google === 'undefined' || !google.script || !google.script.run) {
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function() {})
+        .withFailureHandler(function(error) {
+          console.error('Falha ao registrar erro do cliente no GAS.', error);
+        })
+        .apiLogClientError(payload);
+    }
+
+    window.addEventListener('error', function(event) {
+      logClientIssue({
+        source: 'window.error',
+        message: event && event.message ? event.message : 'Erro desconhecido no frontend.',
+        fileName: event && event.filename ? event.filename : '',
+        lineNumber: event && event.lineno ? event.lineno : '',
+        columnNumber: event && event.colno ? event.colno : '',
+        stack: event && event.error && event.error.stack ? event.error.stack : ''
+      });
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      const reason = event && event.reason ? event.reason : {};
+      logClientIssue({
+        source: 'window.unhandledrejection',
+        message: reason && reason.message ? reason.message : String(reason || 'Promise rejeitada sem detalhe.'),
+        stack: reason && reason.stack ? reason.stack : ''
+      });
+    });
+
     createApp({
       setup() {
         const navigation = [
@@ -1259,6 +1293,10 @@
           { id: 'ATRASADA', title: 'Atrasadas' },
           { id: 'CONCLUIDA', title: 'Concluídas' }
         ];
+
+        const view = Vue.ref('overview');
+        const selectedProjectId = Vue.ref('');
+        const executiveReport = Vue.ref(null);
 
         const appData = reactive({
           empresas: [],
@@ -1300,10 +1338,6 @@
           eyebrow: '',
           payload: {}
         });
-
-        const view = Vue.ref('overview');
-        const selectedProjectId = Vue.ref('');
-        const executiveReport = Vue.ref(null);
 
         const summary = computed(() => appData.summary || {});
         const currentView = computed(() => navigation.find((item) => item.id === view.value) || navigation[0]);
@@ -1609,6 +1643,13 @@
         function handleFailure(error) {
           const message = error && error.message ? error.message : 'Ocorreu um erro inesperado.';
           ui.error = message;
+          logClientIssue({
+            source: 'handleFailure',
+            message,
+            stack: error && error.stack ? error.stack : '',
+            currentView: view.value,
+            selectedProjectId: selectedProjectId.value || ''
+          });
           window.alert(`Ação não concluída: ${message}`);
         }
 

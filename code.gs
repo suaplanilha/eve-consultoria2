@@ -27,10 +27,12 @@ const ENTITY_CONFIG = {
 };
 
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle(APP_TITLE)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return runWithLogging_('doGet', function() {
+    return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle(APP_TITLE)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  });
 }
 
 function include(filename) {
@@ -38,140 +40,224 @@ function include(filename) {
 }
 
 function getInitialAppData(forceRefresh) {
-  const cache = CacheService.getScriptCache();
-  if (!forceRefresh) {
-    const cached = cache.get(CACHE_KEY_INITIAL_DATA);
-    if (cached) {
-      return JSON.parse(cached);
+  return runWithLogging_('getInitialAppData', function() {
+    const cache = CacheService.getScriptCache();
+    if (!forceRefresh) {
+      const cached = cache.get(CACHE_KEY_INITIAL_DATA);
+      if (cached) {
+        logInfo_('getInitialAppData', 'Payload servido do cache.');
+        return JSON.parse(cached);
+      }
     }
-  }
 
-  const empresas = getEntityRecords_('EMPRESAS');
-  const projetos = hydrateProjects_(getEntityRecords_('PROJETOS'), getEntityRecords_('TAREFAS'));
-  const tarefas = hydrateTasks_(getEntityRecords_('TAREFAS'));
-  const historico = getEntityRecords_('TAREFAS_HISTORICO');
-  const summary = buildDashboardSummary_(empresas, projetos, tarefas);
-  const projectReports = projetos.map(function(project) {
-    return buildExecutiveReportForProject_(project, empresas, tarefas, historico);
-  });
+    const empresas = getEntityRecords_('EMPRESAS');
+    const projetos = hydrateProjects_(getEntityRecords_('PROJETOS'), getEntityRecords_('TAREFAS'));
+    const tarefas = hydrateTasks_(getEntityRecords_('TAREFAS'));
+    const historico = getEntityRecords_('TAREFAS_HISTORICO');
+    const summary = buildDashboardSummary_(empresas, projetos, tarefas);
+    const projectReports = projetos.map(function(project) {
+      return buildExecutiveReportForProject_(project, empresas, tarefas, historico);
+    });
 
-  const payload = {
-    empresas: empresas,
-    projetos: projetos,
-    tarefas: tarefas,
-    historico: historico,
-    summary: summary,
-    projectReports: projectReports,
-    config: {
-      appTitle: APP_TITLE,
-      version: '2.0.0-SAE',
-      user: safeGetUserEmail_(),
-      sheetSchema: buildSheetSchema_(),
-      lastSyncAt: new Date().toISOString()
-    }
-  };
+    const payload = {
+      empresas: empresas,
+      projetos: projetos,
+      tarefas: tarefas,
+      historico: historico,
+      summary: summary,
+      projectReports: projectReports,
+      config: {
+        appTitle: APP_TITLE,
+        version: '2.0.1-SAE',
+        user: safeGetUserEmail_(),
+        sheetSchema: buildSheetSchema_(),
+        lastSyncAt: new Date().toISOString()
+      }
+    };
 
-  cache.put(CACHE_KEY_INITIAL_DATA, JSON.stringify(payload), CACHE_TTL_SECONDS);
-  return payload;
+    cache.put(CACHE_KEY_INITIAL_DATA, JSON.stringify(payload), CACHE_TTL_SECONDS);
+    logInfo_('getInitialAppData', 'Payload reconstruído com sucesso.', {
+      empresas: empresas.length,
+      projetos: projetos.length,
+      tarefas: tarefas.length,
+      historico: historico.length
+    });
+    return payload;
+  }, { forceRefresh: !!forceRefresh });
 }
 
 function apiSaveEmpresa(payload) {
-  const saved = upsertEntity_('EMPRESAS', payload);
-  return buildMutationResponse_('Empresa salva com sucesso.', saved.id, 'EMPRESAS');
+  return runWithLogging_('apiSaveEmpresa', function() {
+    const saved = upsertEntity_('EMPRESAS', payload);
+    return buildMutationResponse_('Empresa salva com sucesso.', saved.id, 'EMPRESAS');
+  }, payload || {});
 }
 
 function apiSaveProjeto(payload) {
-  if (!payload.empresaId) {
-    throw new Error('Selecione a empresa vinculada ao projeto.');
-  }
-  const saved = upsertEntity_('PROJETOS', payload);
-  return buildMutationResponse_('Projeto salvo com sucesso.', saved.id, 'PROJETOS');
+  return runWithLogging_('apiSaveProjeto', function() {
+    if (!payload.empresaId) {
+      throw new Error('Selecione a empresa vinculada ao projeto.');
+    }
+    const saved = upsertEntity_('PROJETOS', payload);
+    return buildMutationResponse_('Projeto salvo com sucesso.', saved.id, 'PROJETOS');
+  }, payload || {});
 }
 
 function apiSaveTarefa(payload) {
-  if (!payload.projetoId) {
-    throw new Error('Selecione o projeto antes de salvar a tarefa.');
-  }
-  const saved = upsertEntity_('TAREFAS', payload, { trackHistory: true, origin: 'APP_FORM' });
-  return buildMutationResponse_('Tarefa salva com sucesso.', saved.id, 'TAREFAS');
+  return runWithLogging_('apiSaveTarefa', function() {
+    if (!payload.projetoId) {
+      throw new Error('Selecione o projeto antes de salvar a tarefa.');
+    }
+    const saved = upsertEntity_('TAREFAS', payload, { trackHistory: true, origin: 'APP_FORM' });
+    return buildMutationResponse_('Tarefa salva com sucesso.', saved.id, 'TAREFAS');
+  }, payload || {});
 }
 
 function apiConcluirTarefa(payload) {
-  if (!payload || !payload.tarefaId) {
-    throw new Error('Tarefa inválida para conclusão.');
-  }
+  return runWithLogging_('apiConcluirTarefa', function() {
+    if (!payload || !payload.tarefaId) {
+      throw new Error('Tarefa inválida para conclusão.');
+    }
 
-  const task = findRecordById_('TAREFAS', payload.tarefaId);
-  if (!task) {
-    throw new Error('Tarefa não encontrada.');
-  }
+    const task = findRecordById_('TAREFAS', payload.tarefaId);
+    if (!task) {
+      throw new Error('Tarefa não encontrada.');
+    }
 
-  const merged = Object.assign({}, task.record, {
-    statusManual: 'CONCLUIDA',
-    statusCalc: 'CONCLUIDA',
-    dataConclusao: normalizeIsoDate_(payload.dataConclusao || new Date()),
-    resultado: sanitizeText_(payload.resultado || task.record.resultado || ''),
-    resultadoFinal: normalizeNumberString_(payload.resultadoFinal || task.record.resultadoFinal || ''),
-    observacao: sanitizeText_(payload.observacao || task.record.observacao || ''),
-    updatedAt: new Date().toISOString()
-  });
+    const merged = Object.assign({}, task.record, {
+      statusManual: 'CONCLUIDA',
+      statusCalc: 'CONCLUIDA',
+      dataConclusao: normalizeIsoDate_(payload.dataConclusao || new Date()),
+      resultado: sanitizeText_(payload.resultado || task.record.resultado || ''),
+      resultadoFinal: normalizeNumberString_(payload.resultadoFinal || task.record.resultadoFinal || ''),
+      observacao: sanitizeText_(payload.observacao || task.record.observacao || ''),
+      updatedAt: new Date().toISOString()
+    });
 
-  writeRecordAtRow_('TAREFAS', task.rowIndex, merged);
-  appendTaskHistory_(task.record, merged, 'APP_CONCLUSAO', payload.observacao || 'Conclusão registrada via painel');
-  logAction_('CONCLUIR', 'TAREFAS', payload.tarefaId, merged);
-  invalidateInitialDataCache_();
+    writeRecordAtRow_('TAREFAS', task.rowIndex, merged);
+    appendTaskHistory_(task.record, merged, 'APP_CONCLUSAO', payload.observacao || 'Conclusão registrada via painel');
+    logAction_('CONCLUIR', 'TAREFAS', payload.tarefaId, merged);
+    invalidateInitialDataCache_();
 
-  return buildMutationResponse_('Tarefa concluída com sucesso.', payload.tarefaId, 'TAREFAS');
+    return buildMutationResponse_('Tarefa concluída com sucesso.', payload.tarefaId, 'TAREFAS');
+  }, payload || {});
 }
 
 function apiArchiveEmpresa(empresaId) {
-  const found = findRecordById_('EMPRESAS', empresaId);
-  if (!found) {
-    throw new Error('Empresa não encontrada.');
-  }
+  return runWithLogging_('apiArchiveEmpresa', function() {
+    const found = findRecordById_('EMPRESAS', empresaId);
+    if (!found) {
+      throw new Error('Empresa não encontrada.');
+    }
 
-  const updated = Object.assign({}, found.record, {
-    status: 'INATIVA',
-    updatedAt: new Date().toISOString()
-  });
+    const updated = Object.assign({}, found.record, {
+      status: 'INATIVA',
+      updatedAt: new Date().toISOString()
+    });
 
-  writeRecordAtRow_('EMPRESAS', found.rowIndex, updated);
-  logAction_('ARQUIVAR', 'EMPRESAS', empresaId, updated);
-  invalidateInitialDataCache_();
+    writeRecordAtRow_('EMPRESAS', found.rowIndex, updated);
+    logAction_('ARQUIVAR', 'EMPRESAS', empresaId, updated);
+    invalidateInitialDataCache_();
 
-  return buildMutationResponse_('Empresa arquivada com sucesso.', empresaId, 'EMPRESAS');
+    return buildMutationResponse_('Empresa arquivada com sucesso.', empresaId, 'EMPRESAS');
+  }, { empresaId: empresaId });
 }
 
 function apiDeleteTarefa(tarefaId) {
-  const config = ENTITY_CONFIG.TAREFAS;
-  const sheet = getOrCreateSheet_('TAREFAS');
-  const values = sheet.getDataRange().getValues();
-  const headers = values[0] || config.headers;
-  const idIndex = headers.indexOf(config.idField);
+  return runWithLogging_('apiDeleteTarefa', function() {
+    const config = ENTITY_CONFIG.TAREFAS;
+    const sheet = getOrCreateSheet_('TAREFAS');
+    const values = sheet.getDataRange().getValues();
+    const headers = values[0] || config.headers;
+    const idIndex = headers.indexOf(config.idField);
 
-  for (var rowIndex = 1; rowIndex < values.length; rowIndex += 1) {
-    if (String(values[rowIndex][idIndex]) === String(tarefaId)) {
-      sheet.deleteRow(rowIndex + 1);
-      logAction_('DELETE', 'TAREFAS', tarefaId, { tarefaId: tarefaId });
-      invalidateInitialDataCache_();
-      return buildMutationResponse_('Tarefa removida com sucesso.', tarefaId, 'TAREFAS');
+    for (var rowIndex = 1; rowIndex < values.length; rowIndex += 1) {
+      if (String(values[rowIndex][idIndex]) === String(tarefaId)) {
+        sheet.deleteRow(rowIndex + 1);
+        logAction_('DELETE', 'TAREFAS', tarefaId, { tarefaId: tarefaId });
+        invalidateInitialDataCache_();
+        return buildMutationResponse_('Tarefa removida com sucesso.', tarefaId, 'TAREFAS');
+      }
     }
-  }
 
-  throw new Error('Tarefa não encontrada para exclusão.');
+    throw new Error('Tarefa não encontrada para exclusão.');
+  }, { tarefaId: tarefaId });
 }
 
 function apiGetExecutiveReport(projetoId) {
-  const data = getInitialAppData(true);
-  const project = data.projetos.filter(function(item) {
-    return String(item.projetoId) === String(projetoId);
-  })[0];
+  return runWithLogging_('apiGetExecutiveReport', function() {
+    const data = getInitialAppData(true);
+    const project = data.projetos.filter(function(item) {
+      return String(item.projetoId) === String(projetoId);
+    })[0];
 
-  if (!project) {
-    throw new Error('Projeto não encontrado para relatório.');
+    if (!project) {
+      throw new Error('Projeto não encontrado para relatório.');
+    }
+
+    return buildExecutiveReportForProject_(project, data.empresas, data.tarefas, data.historico);
+  }, { projetoId: projetoId });
+}
+
+
+function apiLogClientError(payload) {
+  return runWithLogging_('apiLogClientError', function() {
+    const safePayload = payload || {};
+    logError_('CLIENT', new Error(safePayload.message || 'Erro reportado pelo frontend.'), safePayload);
+    return { success: true };
+  }, payload || {});
+}
+
+function runWithLogging_(scope, callback, metadata) {
+  logInfo_(scope, 'Início da execução.', metadata || {});
+  try {
+    const result = callback();
+    logInfo_(scope, 'Execução concluída com sucesso.', metadata || {});
+    return result;
+  } catch (error) {
+    logError_(scope, error, metadata || {});
+    throw error;
   }
+}
 
-  return buildExecutiveReportForProject_(project, data.empresas, data.tarefas, data.historico);
+function logInfo_(scope, message, payload) {
+  console.info(JSON.stringify({
+    level: 'INFO',
+    scope: scope,
+    message: message,
+    payload: payload || {},
+    timestamp: new Date().toISOString()
+  }));
+}
+
+function logError_(scope, error, payload) {
+  const diagnostic = {
+    scope: scope,
+    message: error && error.message ? error.message : 'Erro desconhecido.',
+    stack: error && error.stack ? error.stack : '',
+    payload: payload || {},
+    timestamp: new Date().toISOString()
+  };
+
+  console.error(JSON.stringify(Object.assign({ level: 'ERROR' }, diagnostic)));
+
+  try {
+    appendRow_('LOGS', {
+      logId: Utilities.getUuid(),
+      timestamp: diagnostic.timestamp,
+      acao: 'ERROR',
+      entidade: scope,
+      entidadeId: '',
+      detalhes: JSON.stringify(diagnostic)
+    });
+  } catch (loggingError) {
+    console.error(JSON.stringify({
+      level: 'ERROR',
+      scope: 'logError_',
+      message: loggingError && loggingError.message ? loggingError.message : 'Falha ao persistir log.',
+      timestamp: new Date().toISOString()
+    }));
+  }
 }
 
 function buildMutationResponse_(message, entityId, entityName) {
