@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ER Consultoria | Painel SAE</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Tailwind for Utilities -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --sae-deep-blue: #020b24;
+            --sae-royal-blue: #0b1f5e;
+            --sae-indigo: #2b0f3a;
+            --sae-wine: #3a0b1e;
+            --sae-primary: #063096;
+            --sae-secondary: #576ca6;
+            --sae-accent: #7c96c3;
+            --ink: #0f172a;
+            --muted: #475569;
+            --bg: #f8fafc;
+            --panel: #ffffff;
+            --border: rgba(255, 255, 255, 0.12);
+            --accent: #0ea5a4;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --success: #16a34a;
+            --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Manrope", sans-serif;
+            background: linear-gradient(135deg, var(--sae-deep-blue) 0%, var(--sae-royal-blue) 50%, var(--sae-indigo) 100%);
+            color: rgba(255, 255, 255, 0.92);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        [v-cloak] { display: none; }
+
+        .app {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .glass-sidebar {
+            width: 260px;
+            background: rgba(2, 11, 36, 0.85);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+            padding: 24px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 40;
+        }
+
+        .glass-header {
+            background: rgba(11, 31, 94, 0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Sidebar Profile */
+        .sidebar-profile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .sidebar-profile img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            object-fit: cover;
+            background: white;
+        }
+
+        .nav-item {
+            padding: 12px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(6, 48, 150, 0.4) 0%, rgba(87, 108, 166, 0.2) 100%);
+            border-left: 3px solid #7c96c3;
+            color: white;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th {
+            background: rgba(2, 11, 36, 0.6);
+            padding: 14px;
+            text-align: left;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--sae-accent);
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        tr.clickable:hover {
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .EM_DIA { background: rgba(22, 163, 74, 0.2); color: #4ade80; }
+        .ATRASADA { background: rgba(220, 38, 38, 0.2); color: #f87171; }
+        .PLANEJAMENTO { background: rgba(71, 85, 105, 0.2); color: #94a3b8; }
+
+        /* Forms */
+        .field {
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .field label { font-size: 11px; text-transform: uppercase; color: var(--sae-accent); }
+        .field input, .field select, .field textarea {
+            background: rgba(2, 11, 36, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: white;
+            outline: none;
+        }
+        .field input:focus { border-color: var(--sae-accent); }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--sae-primary), var(--sae-secondary));
+            color: white;
+            border: none;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-content {
+            width: 100%;
+            max-width: 650px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* Kanban */
+        .kanban-board {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding-bottom: 16px;
+        }
+        .kanban-column {
+            min-width: 300px;
+            background: rgba(2, 11, 36, 0.4);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .kanban-task {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 14px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak class="app">
+    <!-- Sidebar -->
+    <aside class="glass-sidebar">
+        <div class="sidebar-profile">
+            <img src="https://i.ibb.co/ns7PtQP4/logos-SAE.png" alt="ER Consultoria">
+            <div class="text-center">
+                <h2 class="font-bold text-lg">ER Consultoria</h2>
+                <span class="text-[10px] opacity-60 uppercase tracking-widest">Painel do Consultor</span>
+            </div>
+        </div>
+
+        <nav class="flex flex-col gap-2">
+            <div @click="view = 'dashboard'" :class="['nav-item', { active: view === 'dashboard' }]">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+            </div>
+            <div @click="view = 'empresas'" :class="['nav-item', { active: view === 'empresas' }]">
+                <i data-lucide="building-2" class="w-5 h-5"></i> Empresas
+            </div>
+            <div @click="view = 'projetos'" :class="['nav-item', { active: view === 'projetos' }]">
+                <i data-lucide="folder-kanban" class="w-5 h-5"></i> Consultorias
+            </div>
+            <div @click="view = 'relatorios'" :class="['nav-item', { active: view === 'relatorios' }]">
+                <i data-lucide="file-text" class="w-5 h-5"></i> Relatórios
+            </div>
+        </nav>
+
+        <div class="mt-auto pt-6 border-t border-white/10 text-[10px] text-center opacity-40">
+            SAE Framework v0.1.0<br>ER Consultoria &copy; 2024
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <header class="glass-header">
+            <div>
+                <h1 class="font-bold text-xl uppercase tracking-tight">{{ viewTitles[view] }}</h1>
+                <p class="text-xs opacity-60">{{ getSubheader() }}</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <button v-if="view === 'empresas'" @click="openModal('empresa')" class="btn btn-primary">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Nova Empresa
+                </button>
+                <button v-if="view === 'projetos'" @click="openModal('projeto')" class="btn btn-primary">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Novo Projeto
+                </button>
+            </div>
+        </header>
+
+        <section class="content-area custom-scrollbar">
+            
+            <!-- VIEW: DASHBOARD -->
+            <div v-if="view === 'dashboard'" class="animate-fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="glass-card p-6">
+                        <span class="text-xs uppercase opacity-60">Empresas Ativas</span>
+                        <h2 class="text-3xl font-extrabold mt-1">{{ stats.empresasAtivas }}</h2>
+                    </div>
+                    <div class="glass-card p-6 border-l-4 border-l-blue-500">
+                        <span class="text-xs uppercase opacity-60">Consultorias em Curso</span>
+                        <h2 class="text-3xl font-extrabold mt-1">{{ stats.projetosAtivos }}</h2>
+                    </div>
+                    <div class="glass-card p-6 border-l-4 border-l-yellow-500">
+                        <span class="text-xs uppercase opacity-60">Tarefas Pendentes</span>
+                        <h2 class="text-3xl font-extrabold mt-1">{{ stats.tarefasPendentes }}</h2>
+                    </div>
+                    <div class="glass-card p-6 border-l-4 border-l-red-500">
+                        <span class="text-xs uppercase opacity-60">Tarefas Atrasadas</span>
+                        <h2 class="text-3xl font-extrabold mt-1">{{ stats.tarefasAtrasadas }}</h2>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="glass-card p-6">
+                        <h3 class="font-bold mb-4 flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4"></i> Próximos Vencimentos
+                        </h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tarefa</th>
+                                    <th>Prazo</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="t in topTarefas" :key="t.tarefaId">
+                                    <td>{{ t.descricao }}</td>
+                                    <td>{{ t.dataFim }}</td>
+                                    <td><span :class="['badge', t.statusCalc]">{{ t.statusCalc }}</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="glass-card p-6">
+                        <h3 class="font-bold mb-4 flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i> Desempenho Global
+                        </h3>
+                        <div class="flex flex-col gap-6">
+                            <div v-for="p in topProjetos" :key="p.projetoId" class="flex flex-col gap-2">
+                                <div class="flex justify-between text-xs">
+                                    <span>{{ p.nomeProjeto }}</span>
+                                    <span>{{ p.progresso }}%</span>
+                                </div>
+                                <div class="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-blue-500 h-full transition-all duration-500" :style="{ width: p.progresso + '%' }"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: EMPRESAS -->
+            <div v-if="view === 'empresas'" class="animate-fade-in">
+                <div class="glass-card overflow-hidden">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Razão Social / Fantasia</th>
+                                <th>CNPJ</th>
+                                <th>Status</th>
+                                <th>Início Contrato</th>
+                                <th class="text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="e in db.empresas" :key="e.empresaId" class="clickable" @click="editEmpresa(e)">
+                                <td>
+                                    <div class="font-bold">{{ e.nomeFantasia }}</div>
+                                    <div class="text-[11px] opacity-60">{{ e.nomeRazao }}</div>
+                                </td>
+                                <td>{{ e.cnpj }}</td>
+                                <td><span :class="['badge', e.status]">{{ e.status }}</span></td>
+                                <td>{{ e.dataInicio }}</td>
+                                <td class="text-right">
+                                    <button class="p-2 hover:bg-white/10 rounded-lg"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW: PROJETOS / KANBAN 5W2H -->
+            <div v-if="view === 'projetos'" class="animate-fade-in h-full flex flex-col gap-4">
+                <div class="flex gap-4 mb-4">
+                    <select v-model="selectedProjectId" class="bg-white/5 border border-white/10 rounded-lg p-2 text-sm w-64">
+                        <option value="">Selecione um Projeto...</option>
+                        <option v-for="p in db.projetos" :key="p.projetoId" :value="p.projetoId">{{ p.nomeProjeto }}</option>
+                    </select>
+                </div>
+
+                <div v-if="selectedProjectId" class="kanban-board custom-scrollbar flex-1">
+                    <div v-for="col in kanbanCols" :key="col.id" class="kanban-column">
+                        <div class="flex justify-between items-center mb-2 px-1">
+                            <h4 class="text-xs font-bold uppercase tracking-wider opacity-60">{{ col.title }}</h4>
+                            <span class="bg-white/10 text-[10px] px-2 py-0.5 rounded-full">{{ getTasksByCol(col.id).length }}</span>
+                        </div>
+                        <div v-for="task in getTasksByCol(col.id)" :key="task.tarefaId" class="kanban-task" @click="editTask(task)">
+                            <div class="text-[10px] uppercase font-bold text-blue-400 mb-1">{{ task.fase }}</div>
+                            <div class="text-sm font-semibold leading-tight mb-2">{{ task.descricao }}</div>
+                            <div class="flex justify-between items-center mt-3">
+                                <span class="text-[10px] opacity-50 flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-3 h-3"></i> {{ task.dataFim || 'S/D' }}
+                                </span>
+                                <span class="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10">{{ task.metaValor }}{{ task.metaUnidade }}</span>
+                            </div>
+                        </div>
+                        <button @click="openModal('tarefa', col.id)" class="w-full py-2 border border-dashed border-white/10 rounded-lg text-xs opacity-40 hover:opacity-100 transition-all">
+                            + Adicionar Tarefa
+                        </button>
+                    </div>
+                </div>
+                <div v-else class="flex-1 flex flex-col items-center justify-center opacity-30">
+                    <i data-lucide="layers" class="w-16 h-16 mb-4"></i>
+                    <p>Selecione um projeto para visualizar o Kanban 5W2H</p>
+                </div>
+            </div>
+
+            <!-- VIEW: RELATÓRIOS -->
+            <div v-if="view === 'relatorios'" class="animate-fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div v-for="p in db.projetos" :key="p.projetoId" class="glass-card p-6 flex flex-col gap-4">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-lg">{{ p.nomeProjeto }}</h3>
+                            <span :class="['badge', p.statusCalc]">{{ p.statusCalc }}</span>
+                        </div>
+                        <div class="text-xs opacity-60">Cliente: {{ getEmpresaName(p.empresaId) }}</div>
+                        <div class="flex gap-2 mt-4">
+                            <button class="btn btn-primary text-xs flex-1">
+                                <i data-lucide="share-2" class="w-3 h-3"></i> Link Cliente
+                            </button>
+                            <button class="btn text-xs flex-1">
+                                <i data-lucide="download" class="w-3 h-3"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Modal Manager -->
+    <div v-if="modal.show" class="modal-backdrop" @click.self="closeModal">
+        <div class="modal-content glass-card p-8 animate-slide-in-right">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <i :data-lucide="modal.icon" class="w-6 h-6"></i> {{ modal.title }}
+            </h2>
+
+            <!-- Form Empresa -->
+            <div v-if="modal.type === 'empresa'" class="grid grid-cols-2 gap-4">
+                <div class="field col-span-2">
+                    <label>Razão Social</label>
+                    <input type="text" v-model="formEmpresa.nomeRazao">
+                </div>
+                <div class="field">
+                    <label>Nome Fantasia</label>
+                    <input type="text" v-model="formEmpresa.nomeFantasia">
+                </div>
+                <div class="field">
+                    <label>CNPJ</label>
+                    <input type="text" v-model="formEmpresa.cnpj" placeholder="00.000.000/0000-00">
+                </div>
+                <div class="field">
+                    <label>Início do Contrato</label>
+                    <input type="date" v-model="formEmpresa.dataInicio">
+                </div>
+                <div class="field">
+                    <label>Previsão Término</label>
+                    <input type="date" v-model="formEmpresa.dataFimPrevista">
+                </div>
+            </div>
+
+            <!-- Form Tarefa (5W2H) -->
+            <div v-if="modal.type === 'tarefa'" class="flex flex-col gap-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="field col-span-2">
+                        <label>O QUE (Descrição)</label>
+                        <input type="text" v-model="formTask.descricao" placeholder="O que será feito?">
+                    </div>
+                    <div class="field">
+                        <label>ONDE (Fase/Local)</label>
+                        <select v-model="formTask.fase">
+                            <option value="DIAGNOSTICO">Diagnóstico</option>
+                            <option value="PLANEJAMENTO">Planejamento</option>
+                            <option value="IMPLANTACAO">Implantação</option>
+                            <option value="MONITORAMENTO">Monitoramento</option>
+                            <option value="ENCERRAMENTO">Encerramento</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>QUANDO (Prazo Final)</label>
+                        <input type="date" v-model="formTask.dataFim">
+                    </div>
+                    <div class="field col-span-2">
+                        <label>COMO (Detalhes/Método)</label>
+                        <textarea v-model="formTask.detalhes" rows="3" placeholder="Como será executado?"></textarea>
+                    </div>
+                    <div class="field">
+                        <label>QUANTO (Meta/Valor)</label>
+                        <input type="number" v-model="formTask.metaValor">
+                    </div>
+                    <div class="field">
+                        <label>UNIDADE</label>
+                        <select v-model="formTask.metaUnidade">
+                            <option value="%">% Percentual</option>
+                            <option value="R$">R$ Financeiro</option>
+                            <option value="UN">UN Unidades</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mt-8 pt-6 border-t border-white/10">
+                <button v-if="modal.isEdit" @click="handleDelete" class="btn text-red-400 border-red-400/20 hover:bg-red-400/10">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Excluir
+                </button>
+                <div class="flex gap-3 ml-auto">
+                    <button @click="closeModal" class="btn">Cancelar</button>
+                    <button @click="handleSave" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script>
+    const { createApp, ref, onMounted, computed, watch } = Vue;
+
+    createApp({
+        setup() {
+            const view = ref('dashboard');
+            const selectedProjectId = ref('');
+            const db = ref({
+                empresas: [],
+                projetos: [],
+                tarefas: []
+            });
+
+            const viewTitles = {
+                dashboard: 'Visão Geral',
+                empresas: 'Gestão de Clientes',
+                projetos: 'Kanban de Consultoria',
+                relatorios: 'Resultados & Entrega'
+            };
+
+            const kanbanCols = [
+                { id: 'BACKLOG', title: 'Backlog' },
+                { id: 'VENCENDO_SEMANA', title: 'Nesta Semana' },
+                { id: 'EM_DIA', title: 'Em Andamento' },
+                { id: 'ATRASADA', title: 'Atrasadas' },
+                { id: 'CONCLUIDA', title: 'Concluídas' }
+            ];
+
+            // Modal State
+            const modal = ref({
+                show: false,
+                type: '',
+                title: '',
+                icon: 'plus',
+                isEdit: false
+            });
+
+            const formEmpresa = ref({ empresaId: '', nomeRazao: '', nomeFantasia: '', cnpj: '', dataInicio: '', dataFimPrevista: '', status: 'EM_DIA' });
+            const formTask = ref({ tarefaId: '', projetoId: '', fase: 'DIAGNOSTICO', descricao: '', dataFim: '', statusCalc: 'BACKLOG', metaValor: 0, metaUnidade: '%', detalhes: '' });
+
+            // Mock Data Engine (Emulando o Banco de Dados do CSV analisado)
+            const loadData = () => {
+                // Simulando carga inicial baseada nos snippets analisados
+                db.value.empresas = [
+                    { empresaId: 'E-0007', nomeRazao: 'Claro Contabilidade', nomeFantasia: 'Claro', cnpj: '50.620.310/0001-34', status: 'EM_DIA', dataInicio: '2026-02-10' },
+                    { empresaId: 'E-0008', nomeRazao: 'DALVAN AJARDO', nomeFantasia: 'M.I Serviços', cnpj: '20.267.870/0001-39', status: 'EM_DIA', dataInicio: '2026-01-10' },
+                    { empresaId: 'E-0009', nomeRazao: 'RENATO IMOVEIS', nomeFantasia: 'Renato Imóveis', cnpj: '41.284.168/0001-53', status: 'EM_DIA', dataInicio: '2026-03-09' }
+                ];
+
+                db.value.projetos = [
+                    { projetoId: 'P-0011', empresaId: 'E-0008', nomeProjeto: 'Reestruturação Administrativa', statusCalc: 'PLANEJAMENTO', progresso: 45 },
+                    { projetoId: 'P-0012', empresaId: 'E-0007', nomeProjeto: 'Expansão de Mercado', statusCalc: 'PLANEJAMENTO', progresso: 15 },
+                    { projetoId: 'P-0013', empresaId: 'E-0009', nomeProjeto: 'Consultoria Organizacional', statusCalc: 'EM_DIA', progresso: 80 }
+                ];
+
+                db.value.tarefas = [
+                    { tarefaId: 'T-0074', projetoId: 'P-0012', fase: 'ENCERRAMENTO', descricao: 'Mapear Stakeholders', statusCalc: 'BACKLOG', dataFim: '2026-04-15', metaValor: 100, metaUnidade: '%', detalhes: 'Identificar todos os envolvidos' },
+                    { tarefaId: 'T-0075', projetoId: 'P-0012', fase: 'ENCERRAMENTO', descricao: 'Levantamento de Processos', statusCalc: 'VENCENDO_SEMANA', dataFim: '2026-03-20', metaValor: 50, metaUnidade: '%', detalhes: 'Documentar fluxogramas' },
+                    { tarefaId: 'T-0076', projetoId: 'P-0012', fase: 'MONITORAMENTO', descricao: 'Organizar Financeiro', statusCalc: 'ATRASADA', dataFim: '2026-03-09', metaValor: 100, metaUnidade: 'R$', detalhes: 'Conciliação bancária' },
+                    { tarefaId: 'T-0063', projetoId: 'P-0011', fase: 'PLANEJAMENTO', descricao: 'Redesenhar Estrutura', statusCalc: 'EM_DIA', dataFim: '2026-05-04', metaValor: 100, metaUnidade: '%', detalhes: 'Novo organigrama' }
+                ];
+                
+                // Refresh Icons
+                setTimeout(() => lucide.createIcons(), 100);
+            };
+
+            // Computed Stats
+            const stats = computed(() => ({
+                empresasAtivas: db.value.empresas.filter(e => e.status !== 'INATIVA').length,
+                projetosAtivos: db.value.projetos.length,
+                tarefasPendentes: db.value.tarefas.filter(t => t.statusCalc !== 'CONCLUIDA').length,
+                tarefasAtrasadas: db.value.tarefas.filter(t => t.statusCalc === 'ATRASADA').length
+            }));
+
+            const topTarefas = computed(() => db.value.tarefas.slice(0, 5));
+            const topProjetos = computed(() => db.value.projetos);
+
+            // Helpers
+            const getSubheader = () => {
+                if(view.value === 'dashboard') return 'Resumo de performance e prazos críticos.';
+                if(view.value === 'empresas') return 'Controle de contratos e dados fiscais dos clientes.';
+                if(view.value === 'projetos') return 'Aplicação da metodologia 5W2H em cards visuais.';
+                return 'Relatórios de progresso e links para clientes.';
+            };
+
+            const getEmpresaName = (id) => db.value.empresas.find(e => e.empresaId === id)?.nomeFantasia || 'N/A';
+            const getTasksByCol = (status) => db.value.tarefas.filter(t => t.projetoId === selectedProjectId.value && t.statusCalc === status);
+
+            // Modal Handlers
+            const openModal = (type, colId = 'BACKLOG') => {
+                modal.value.type = type;
+                modal.value.show = true;
+                modal.value.isEdit = false;
+                if(type === 'empresa') {
+                    modal.value.title = 'Cadastrar Empresa';
+                    modal.value.icon = 'building-2';
+                    formEmpresa.value = { empresaId: 'E-' + Math.floor(Math.random()*1000), nomeRazao: '', nomeFantasia: '', cnpj: '', dataInicio: '', dataFimPrevista: '', status: 'EM_DIA' };
+                } else {
+                    modal.value.title = 'Nova Tarefa 5W2H';
+                    modal.value.icon = 'check-square';
+                    formTask.value = { tarefaId: 'T-' + Math.floor(Math.random()*1000), projetoId: selectedProjectId.value, fase: 'DIAGNOSTICO', descricao: '', dataFim: '', statusCalc: colId, metaValor: 0, metaUnidade: '%', detalhes: '' };
+                }
+                setTimeout(() => lucide.createIcons(), 50);
+            };
+
+            const editEmpresa = (e) => {
+                modal.value.type = 'empresa';
+                modal.value.show = true;
+                modal.value.isEdit = true;
+                modal.value.title = 'Editar Empresa';
+                modal.value.icon = 'edit';
+                formEmpresa.value = { ...e };
+                setTimeout(() => lucide.createIcons(), 50);
+            };
+
+            const editTask = (t) => {
+                modal.value.type = 'tarefa';
+                modal.value.show = true;
+                modal.value.isEdit = true;
+                modal.value.title = 'Editar Tarefa';
+                modal.value.icon = 'edit';
+                formTask.value = { ...t };
+                setTimeout(() => lucide.createIcons(), 50);
+            };
+
+            const closeModal = () => modal.value.show = false;
+
+            const handleSave = () => {
+                if(modal.value.type === 'empresa') {
+                    const idx = db.value.empresas.findIndex(e => e.empresaId === formEmpresa.value.empresaId);
+                    if(idx > -1) db.value.empresas[idx] = { ...formEmpresa.value };
+                    else db.value.empresas.push({ ...formEmpresa.value });
+                } else {
+                    const idx = db.value.tarefas.findIndex(t => t.tarefaId === formTask.value.tarefaId);
+                    if(idx > -1) db.value.tarefas[idx] = { ...formTask.value };
+                    else db.value.tarefas.push({ ...formTask.value });
+                }
+                closeModal();
+            };
+
+            const handleDelete = () => {
+                if(modal.value.type === 'empresa') {
+                    // Soft Delete (Inativar)
+                    const idx = db.value.empresas.findIndex(e => e.empresaId === formEmpresa.value.empresaId);
+                    db.value.empresas[idx].status = 'INATIVA';
+                } else {
+                    db.value.tarefas = db.value.tarefas.filter(t => t.tarefaId !== formTask.value.tarefaId);
+                }
+                closeModal();
+            };
+
+            onMounted(loadData);
+
+            watch(view, () => {
+                setTimeout(() => lucide.createIcons(), 100);
+            });
+
+            return {
+                view, viewTitles, db, stats, topTarefas, topProjetos,
+                selectedProjectId, kanbanCols, modal, formEmpresa, formTask,
+                getSubheader, getEmpresaName, getTasksByCol,
+                openModal, closeModal, handleSave, editEmpresa, editTask, handleDelete
+            };
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
